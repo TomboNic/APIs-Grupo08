@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-MarketplaceApplication<marketplace>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.tpo.uade.marketplace.MarketplaceApplication",
+            "projectName": "marketplace",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
