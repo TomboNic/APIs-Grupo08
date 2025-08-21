@@ -1,13 +1,13 @@
-package com.tpo.uade.marketplace;
+package com.uade.tpo.pixelpoint;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class MarketplaceApplication {
+public class PixelpointApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MarketplaceApplication.class, args);
+		SpringApplication.run(PixelpointApplication.class, args);
 	}
 
 }
