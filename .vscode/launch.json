@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-PixelpointApplication<pixelpoint>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.uade.tpo.pixelpoint.PixelpointApplication",
+            "projectName": "pixelpoint",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
