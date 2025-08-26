@@ -1,8 +1,10 @@
 package com.uade.tpo.pixelpoint.entity.catalog;
 
-import lombok.Builder;
+import jakarta.persistence.Entity;
+import lombok.Data;
 
-@Builder
+@Data
+@Entity
 public class Variants {
     private Long id;
     private DeviceModel deviceModel;
