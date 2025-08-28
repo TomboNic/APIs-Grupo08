@@ -1,12 +1,21 @@
 package com.uade.tpo.pixelpoint.entity.marketplace;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import lombok.Data;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
-@Data
 @Entity
 public class Seller extends User{
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column
     private String displayName;
+
+    @Column
     private String shopDescription;
 }
