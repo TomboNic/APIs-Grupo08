@@ -10,8 +10,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
+import lombok.Data;
 
+@Data
 @Entity
 public class Listing {
 
@@ -23,7 +24,7 @@ public class Listing {
     @JoinColumn(name = "variant_id", nullable = false)
     private Variants variant;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "seller_id", nullable = false)
     private Seller seller;
 
