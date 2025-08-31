@@ -33,6 +33,6 @@ public class Variants {
     private String color;
 
     @Enumerated(EnumType.STRING)
-    @Column 
+    @Column(name = "item_condition") 
     private Condition condition;
 }

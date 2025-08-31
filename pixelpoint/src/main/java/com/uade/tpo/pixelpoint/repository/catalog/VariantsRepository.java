@@ -11,10 +11,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface VariantsRepository extends JpaRepository<Variants, Long>{
     List<Variants> findByDeviceModelId(Long modelId);
 
-    Optional<Variants> findByDeviceModelIdAndRamGbAndStorageGbAndColorIgnoreCaseAndCondition(
-        Long modelId,
-        Integer ramGb,
-        Integer storageGb,
+    Optional<Variants> findByDeviceModelIdAndRamAndStorageAndColorIgnoreCaseAndCondition(
+        Long deviceModelId,
+        Integer ram,
+        Integer storage,
         String color,
         Condition condition
     );

@@ -31,7 +31,7 @@ public class VariantServiceImpl implements VariantService {
                                    String color,
                                    Condition condition) {
         return variantRepository
-                .findByDeviceModelIdAndRamGbAndStorageGbAndColorIgnoreCaseAndCondition(
+                .findByDeviceModelIdAndRamAndStorageAndColorIgnoreCaseAndCondition(
                         modelId, ramGb, storageGb, color, condition
                 )
                 .orElseGet(() -> {
