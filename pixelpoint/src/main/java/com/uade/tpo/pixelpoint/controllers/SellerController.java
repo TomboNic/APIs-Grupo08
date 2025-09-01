@@ -13,23 +13,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("seller")
 public class SellerController {
 
-    @GetMapping()
-    public ArrayList<Seller> getSeller() {
-		SellerService sellerService = new SellerService();
-        return sellerService.getDevice();
-    }
+    // @GetMapping()
+    // public ArrayList<Seller> getSeller() {
+	// 	SellerService sellerService = new SellerService();
+    //     return sellerService.getDevice();
+    // }
     
-    // Obtener por id
-	@GetMapping("{sellerId}") // GET - localhost:****/brand/3
-	public Seller getDeviceMoedlById(@PathVariable Long sellerId) {
-		SellerService sellerService = new SellerService();
-        return sellerService.getSellerById(sellerId);
-	}
+    // // Obtener por id
+	// @GetMapping("{sellerId}") // GET - localhost:****/brand/3
+	// public Seller getDeviceMoedlById(@PathVariable Long sellerId) {
+	// 	SellerService sellerService = new SellerService();
+    //     return sellerService.getSellerById(sellerId);
+	// }
 
-    // Crear nueva Sellering
-	@PostMapping
-	public Seller postSeller(@RequestBody String sellerId) {
-		SellerService sellerService = new SellerService();
-        return sellerService.createSeller(sellerId);
-	}
+    // // Crear nueva Sellering
+	// @PostMapping
+	// public Seller postSeller(@RequestBody String sellerId) {
+	// 	SellerService sellerService = new SellerService();
+    //     return sellerService.createSeller(sellerId);
+	// }
 }

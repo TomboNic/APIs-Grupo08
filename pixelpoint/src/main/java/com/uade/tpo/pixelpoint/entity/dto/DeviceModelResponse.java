@@ -6,5 +6,6 @@ import lombok.Data;
 public class DeviceModelResponse {
     private Long id;
     private Long brandId;
+    private String brandName;
     private String modelName;
 }

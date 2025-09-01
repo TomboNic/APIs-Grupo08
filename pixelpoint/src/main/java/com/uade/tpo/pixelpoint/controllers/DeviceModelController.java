@@ -1,40 +1,103 @@
 package com.uade.tpo.pixelpoint.controllers;
 
-import java.util.ArrayList;
+import java.net.URI;
+import java.util.Optional;
 
-// Spring Imports
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import com.uade.tpo.pixelpoint.entity.catalog.DeviceModel;
-import com.uade.tpo.pixelpoint.services.DeviceModelService;
+import com.uade.tpo.pixelpoint.entity.catalog.Brand;
+import com.uade.tpo.pixelpoint.entity.dto.DeviceModelRequest;
+import com.uade.tpo.pixelpoint.entity.dto.DeviceModelResponse;
+import com.uade.tpo.pixelpoint.repository.catalog.DeviceModelRepository;
+import com.uade.tpo.pixelpoint.repository.catalog.BrandRepository;
 
+
+@Validated
 @RestController
-@RequestMapping("deviceModel")
+@RequestMapping("device-models")
 public class DeviceModelController {
-    // Obtener todas las marcas
-    @GetMapping()
-    public ArrayList<DeviceModel> getDeviceModel() {
-		DeviceModelService deviceModelService = new DeviceModelService();
-        return deviceModelService.getDevice();
+
+    @Autowired
+    private DeviceModelRepository deviceModelRepository; // usamos repo directo
+
+    @Autowired
+    private BrandRepository brandRepository; // para resolver brandId -> Brand
+
+    // GET /device-models?page=0&size=20
+    @GetMapping
+    public ResponseEntity<Page<DeviceModelResponse>> getDeviceModels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Page<DeviceModel> models = deviceModelRepository.findAll(PageRequest.of(page, size));
+        Page<DeviceModelResponse> body = models.map(this::toResponse);
+        return ResponseEntity.ok(body);
     }
-    
-    // Obtener por id
-	@GetMapping("{deviceId}") // GET - localhost:****/brand/3
-	public DeviceModel getDeviceMoedlById(@PathVariable Long deviceId) {
-		DeviceModelService deviceModelService = new DeviceModelService();
-        return deviceModelService.getDeviceModelById(deviceId);
-	}
 
-    // Crear nueva Brand
-	@PostMapping
-	public DeviceModel postDeviceModel(@RequestBody String deviceId) {
-		DeviceModelService deviceModelService = new DeviceModelService();
-        return deviceModelService.createDeviceModel(deviceId);
-	}
+    // GET /device-models/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<DeviceModelResponse> getDeviceModelById(@PathVariable Long id) {
+        Optional<DeviceModel> result = deviceModelRepository.findById(id);
+        return result.map(m -> ResponseEntity.ok(toResponse(m)))
+                     .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
+    // POST /device-models
+    @PostMapping
+    public ResponseEntity<DeviceModelResponse> createDeviceModel(@RequestBody DeviceModelRequest request) {
+
+        Brand brand = brandRepository.findById(request.getBrandId())
+                .orElseThrow(() -> new IllegalArgumentException("brandId " + request.getBrandId() + " no existe"));
+
+        DeviceModel created = new DeviceModel();
+        created.setModelName(request.getModelName());
+        created.setBrand(brand);
+        created = deviceModelRepository.save(created);
+
+        DeviceModelResponse body = toResponse(created);
+        return ResponseEntity.created(URI.create("/device-models/" + created.getId())).body(body);
+    }
+
+    // ---------- Mapper (entity -> response) ----------
+    private DeviceModelResponse toResponse(DeviceModel m) {
+        DeviceModelResponse r = new DeviceModelResponse();
+        r.setId(m.getId());
+        r.setModelName(m.getModelName());
+
+        Brand b = m.getBrand();
+        if (b != null) {
+            r.setBrandId(b.getId());
+            try { r.setBrandName(b.getName()); } catch (Exception ignored) {}
+        }
+        return r;
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DeviceModelResponse> updateDeviceModel(@PathVariable Long id, @RequestBody DeviceModelRequest request) {
+        Optional<DeviceModel> opt = deviceModelRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+
+        Brand brand = brandRepository.findById(request.getBrandId())
+                .orElseThrow(() -> new IllegalArgumentException("brandId " + request.getBrandId() + " no existe"));
+
+        DeviceModel m = opt.get();
+        m.setModelName(request.getModelName().trim());
+        m.setBrand(brand);
+        DeviceModel saved = deviceModelRepository.save(m);
+
+        return ResponseEntity.ok(toResponse(saved));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDeviceModel(@PathVariable Long id) {
+        if (!deviceModelRepository.existsById(id)) return ResponseEntity.notFound().build();
+        deviceModelRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

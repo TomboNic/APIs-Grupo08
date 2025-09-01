@@ -12,17 +12,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("cart")
 public class CartController {
 
-	// GET /cart
-	@GetMapping
-	public String getCart(@RequestParam(required = true) int cartId) {
-		CartService cartService = new CartService();
-        return cartService.getCartById(cartId);
-	}
+	// // GET /cart
+	// @GetMapping
+	// public String getCart(@RequestParam(required = true) int cartId) {
+	// 	CartService cartService = new CartService();
+    //     return cartService.getCartById(cartId);
+	// }
 
-	// POST /cart
-	@PostMapping
-	public Brand postCart(@RequestBody String cartId) {
-		CartService cartService = new CartService();
-        return cartService.createCart(cartId);
-	}
+	// // POST /cart
+	// @PostMapping
+	// public Brand postCart(@RequestBody String cartId) {
+	// 	CartService cartService = new CartService();
+    //     return cartService.createCart(cartId);
+	// }
 }

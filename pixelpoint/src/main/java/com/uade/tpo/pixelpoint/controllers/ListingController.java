@@ -18,23 +18,23 @@ import com.uade.tpo.pixelpoint.services.ListingService;
 @RequestMapping("listing")
 public class ListingController {
     
-    @GetMapping()
-    public ArrayList<Listing> getList() {
-		ListingService listingService = new ListingService();
-        return listingService.catalog(Pageable);
-    }
+    // @GetMapping()
+    // public ArrayList<Listing> getList() {
+	// 	ListingService listingService = new ListingService();
+    //     return listingService.catalog(Pageable);
+    // }
     
-    // Obtener por id
-	@GetMapping("{listId}") // GET - localhost:****/brand/3
-	public Listing getDeviceMoedlById(@PathVariable Long listId) {
-		ListingService listService = new ListingService();
-        return listService.getListingById(listId);
-	}
+    // // Obtener por id
+	// @GetMapping("{listId}") // GET - localhost:****/brand/3
+	// public Listing getDeviceMoedlById(@PathVariable Long listId) {
+	// 	ListingService listService = new ListingService();
+    //     return listService.getListingById(listId);
+	// }
 
-    // Crear nueva Listinging
-	@PostMapping
-	public Listing postListing(@RequestBody String listId) {
-		ListingService listService = new ListingService();
-        return listService.createListing(listId);
-	}
+    // // Crear nueva Listinging
+	// @PostMapping
+	// public Listing postListing(@RequestBody String listId) {
+	// 	ListingService listService = new ListingService();
+    //     return listService.createListing(listId);
+	// }
 }
