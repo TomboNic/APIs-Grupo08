@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.uade.tpo.pixelpoint.entity.dto.SellerRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.Seller;
 import com.uade.tpo.pixelpoint.services.SellerService;
 
@@ -50,16 +51,16 @@ public class SellerController {
 
     // POST /seller - Crear nuevo seller
     @PostMapping
-    public ResponseEntity<Seller> createSeller(@RequestBody SellerCreateRequest request) {
+    public ResponseEntity<Seller> createSeller(@RequestBody SellerRequest request) {
         if (request == null || 
-            request.getDisplayName() == null || request.getDisplayName().trim().isEmpty()) {
+            request.getShopName() == null || request.getShopName().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
         
         try {
             Seller created = sellerService.createSeller(
-                request.getDisplayName().trim(), 
-                request.getShopDescription() != null ? request.getShopDescription().trim() : ""
+                request.getShopName().trim(), 
+                request.getDescription() != null ? request.getDescription().trim() : ""
             );
             
             URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -75,7 +76,7 @@ public class SellerController {
 
     // PUT /seller/{id} - Actualizar seller existente
     @PutMapping("/{id}")
-    public ResponseEntity<Seller> updateSeller(@PathVariable Long id, @RequestBody SellerUpdateRequest request) {
+    public ResponseEntity<Seller> updateSeller(@PathVariable Long id, @RequestBody SellerRequest request) {
         if (request == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
@@ -86,11 +87,11 @@ public class SellerController {
         }
 
         Seller seller = sellerOpt.get();
-        if (request.getDisplayName() != null && !request.getDisplayName().trim().isEmpty()) {
-            seller.setDisplayName(request.getDisplayName().trim());
+        if (request.getShopName() != null && !request.getShopName().trim().isEmpty()) {
+            seller.setShopName(request.getShopName().trim());
         }
-        if (request.getShopDescription() != null) {
-            seller.setShopDescription(request.getShopDescription().trim());
+        if (request.getShopName() != null) {
+            seller.setDescription(request.getDescription().trim());
         }
 
         Seller updated = sellerService.updateSeller(seller);
@@ -109,26 +110,4 @@ public class SellerController {
         return ResponseEntity.noContent().build();
     }
 
-    // Clases internas para requests
-    public static class SellerCreateRequest {
-        private String displayName;
-        private String shopDescription;
-
-        public String getDisplayName() { return displayName; }
-        public void setDisplayName(String displayName) { this.displayName = displayName; }
-        
-        public String getShopDescription() { return shopDescription; }
-        public void setShopDescription(String shopDescription) { this.shopDescription = shopDescription; }
-    }
-
-    public static class SellerUpdateRequest {
-        private String displayName;
-        private String shopDescription;
-
-        public String getDisplayName() { return displayName; }
-        public void setDisplayName(String displayName) { this.displayName = displayName; }
-        
-        public String getShopDescription() { return shopDescription; }
-        public void setShopDescription(String shopDescription) { this.shopDescription = shopDescription; }
-    }
 }
