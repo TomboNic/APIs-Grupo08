@@ -27,10 +27,10 @@ public class SellerServiceImpl implements SellerService {
     }
 
     @Override
-    public Seller createSeller(String displayName, String shopDescription) {
+    public Seller createSeller(String shopName, String description) {
         Seller seller = new Seller();
-        seller.setDisplayName(displayName);
-        seller.setShopDescription(shopDescription);
+        seller.setShopName(shopName);
+        seller.setDescription(description);
         return sellerRepository.save(seller);
     }
 
