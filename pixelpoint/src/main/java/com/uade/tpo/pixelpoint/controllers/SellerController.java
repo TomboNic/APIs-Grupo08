@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
+import org.springframework.security.core.Authentication;
 import com.uade.tpo.pixelpoint.entity.dto.SellerRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.Seller;
 import com.uade.tpo.pixelpoint.services.SellerService;
@@ -50,28 +51,26 @@ public class SellerController {
     }
 
     // POST /seller - Crear nuevo seller
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PostMapping
-    public ResponseEntity<Seller> createSeller(@RequestBody SellerRequest request) {
-        if (request == null || 
-            request.getShopName() == null || request.getShopName().trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-        
-        try {
-            Seller created = sellerService.createSeller(
-                request.getShopName().trim(), 
+    public ResponseEntity<Seller> createSeller(
+            @RequestBody SellerRequest request,
+            Authentication auth) {
+
+        String email = auth.getName(); // email del usuario logueado
+
+        Seller created = sellerService.createSeller(
+                email,
+                request.getShopName().trim(),
                 request.getDescription() != null ? request.getDescription().trim() : ""
-            );
-            
-            URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                    .path("/{id}")
-                    .buildAndExpand(created.getId())
-                    .toUri();
-            
-            return ResponseEntity.created(location).body(created);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        );
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(created);
     }
 
     // PUT /seller/{id} - Actualizar seller existente
@@ -90,10 +89,10 @@ public class SellerController {
         if (request.getShopName() != null && !request.getShopName().trim().isEmpty()) {
             seller.setShopName(request.getShopName().trim());
         }
-        if (request.getShopName() != null) {
+        if (request.getDescription() != null) {
             seller.setDescription(request.getDescription().trim());
         }
-
+        
         Seller updated = sellerService.updateSeller(seller);
         return ResponseEntity.ok(updated);
     }
