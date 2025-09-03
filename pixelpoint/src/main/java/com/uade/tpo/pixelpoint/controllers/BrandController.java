@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.uade.tpo.pixelpoint.entity.catalog.Brand;
 import com.uade.tpo.pixelpoint.services.BrandService;
+
+import jakarta.annotation.security.PermitAll;
+
 import com.uade.tpo.exceptions.BrandDuplicateException;
 import com.uade.tpo.pixelpoint.entity.dto.BrandRequest;
 import com.uade.tpo.pixelpoint.repository.catalog.BrandRepository;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,6 +36,7 @@ public class BrandController {
     private BrandService brandService;
 
     @GetMapping
+    @PermitAll
     public ResponseEntity<Page<Brand>> getBrands(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
@@ -42,6 +47,7 @@ public class BrandController {
     }
 
     @GetMapping("/{brandId}")
+    @PermitAll
     public ResponseEntity<Brand> getBrandById(@PathVariable Long brandId) {
         Optional<Brand> result = brandService.getBrandById(brandId);
         if (result.isPresent()) {
@@ -51,13 +57,16 @@ public class BrandController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Object> createBrand(@RequestBody BrandRequest brandRequest)
             throws BrandDuplicateException {
         Brand result = brandService.createBrand(brandRequest.getName());
         return ResponseEntity.created(URI.create("/brands/" + result.getId())).body(result);
     }
 
+    
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Brand> updateBrand(@PathVariable Long id, @RequestBody BrandRequest request) {
         Optional<Brand> opt = brandRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
@@ -68,6 +77,7 @@ public class BrandController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBrand(@PathVariable Long id) {
         if (!brandRepository.existsById(id)) return ResponseEntity.notFound().build();
         brandRepository.deleteById(id);

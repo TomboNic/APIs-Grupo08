@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.uade.tpo.pixelpoint.entity.catalog.Variants;
@@ -13,7 +14,9 @@ import com.uade.tpo.pixelpoint.entity.dto.VariantsResponse;
 import com.uade.tpo.pixelpoint.repository.catalog.DeviceModelRepository;
 import com.uade.tpo.pixelpoint.repository.catalog.VariantsRepository;
 import com.uade.tpo.pixelpoint.entity.catalog.DeviceModel;
-import com.uade.tpo.pixelpoint.services.VariantService; 
+import com.uade.tpo.pixelpoint.services.VariantService;
+
+import jakarta.annotation.security.PermitAll; 
 
 
 @Validated
@@ -31,6 +34,7 @@ public class VariantsController {
     private VariantService variantService; 
 
     @GetMapping
+    @PermitAll
     public ResponseEntity<Page<VariantsResponse>> getVariants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -41,6 +45,7 @@ public class VariantsController {
     }
 
     @GetMapping("/{variantId}")
+    @PermitAll
     public ResponseEntity<VariantsResponse> getVariantById(@PathVariable Long variantId) {
         Optional<Variants> result = variantService.getVariantById(variantId);
         return result.map(v -> ResponseEntity.ok(toResponse(v)))
@@ -48,6 +53,7 @@ public class VariantsController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VariantsResponse> createVariant(@RequestBody VariantsRequest request) {
         Variants created = variantService.createVariant(
                 request.getDeviceModelId(),
@@ -80,6 +86,7 @@ public class VariantsController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VariantsResponse> updateVariant(@PathVariable Long id, @RequestBody VariantsRequest request) {
         Optional<Variants> opt = variantsRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
@@ -99,6 +106,7 @@ public class VariantsController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteVariant(@PathVariable Long id) {
         if (!variantsRepository.existsById(id)) return ResponseEntity.notFound().build();
         variantsRepository.deleteById(id);

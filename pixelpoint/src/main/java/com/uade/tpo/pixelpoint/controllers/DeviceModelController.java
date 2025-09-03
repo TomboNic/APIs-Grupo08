@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,9 @@ import com.uade.tpo.pixelpoint.entity.catalog.Brand;
 import com.uade.tpo.pixelpoint.entity.dto.DeviceModelRequest;
 import com.uade.tpo.pixelpoint.entity.dto.DeviceModelResponse;
 import com.uade.tpo.pixelpoint.repository.catalog.DeviceModelRepository;
+
+import jakarta.annotation.security.PermitAll;
+
 import com.uade.tpo.pixelpoint.repository.catalog.BrandRepository;
 
 
@@ -31,6 +35,7 @@ public class DeviceModelController {
 
     // GET /device-models?page=0&size=20
     @GetMapping
+    @PermitAll
     public ResponseEntity<Page<DeviceModelResponse>> getDeviceModels(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -42,6 +47,7 @@ public class DeviceModelController {
 
     // GET /device-models/{id}
     @GetMapping("/{id}")
+    @PermitAll
     public ResponseEntity<DeviceModelResponse> getDeviceModelById(@PathVariable Long id) {
         Optional<DeviceModel> result = deviceModelRepository.findById(id);
         return result.map(m -> ResponseEntity.ok(toResponse(m)))
@@ -50,6 +56,7 @@ public class DeviceModelController {
 
     // POST /device-models
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DeviceModelResponse> createDeviceModel(@RequestBody DeviceModelRequest request) {
 
         Brand brand = brandRepository.findById(request.getBrandId())
@@ -79,6 +86,7 @@ public class DeviceModelController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DeviceModelResponse> updateDeviceModel(@PathVariable Long id, @RequestBody DeviceModelRequest request) {
         Optional<DeviceModel> opt = deviceModelRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
@@ -95,6 +103,7 @@ public class DeviceModelController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteDeviceModel(@PathVariable Long id) {
         if (!deviceModelRepository.existsById(id)) return ResponseEntity.notFound().build();
         deviceModelRepository.deleteById(id);

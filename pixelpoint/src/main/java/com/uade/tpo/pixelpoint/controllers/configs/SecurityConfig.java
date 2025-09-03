@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,30 +20,25 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  private final JwtAuthenticationFilter jwtAuthFilter;
-  private final AuthenticationProvider authenticationProvider;
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
 
-  @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-      .csrf(AbstractHttpConfigurer::disable)
-      .formLogin(AbstractHttpConfigurer::disable)
-      .httpBasic(AbstractHttpConfigurer::disable)
-      .authorizeHttpRequests(auth -> auth
-        // auth público
-        .requestMatchers("/api/v1/auth/**").permitAll()
-
-        // seller (tu controller está en "/seller", singular y sin /api)
-        .requestMatchers(HttpMethod.POST, "/seller").authenticated()
-        .requestMatchers("/seller/**").authenticated()
-
-        // lo demás, autenticado
-        .anyRequest().authenticated()
-      )
-      .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authenticationProvider(authenticationProvider)
-      .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-    return http.build();
-  }
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                // PUBLIC: auth
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/authenticate").permitAll()
+                // PUBLIC: docs/actuator (opcional)
+                .requestMatchers("/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // TODO: agregar aquí otros endpoints públicos si los hubiera
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
 }

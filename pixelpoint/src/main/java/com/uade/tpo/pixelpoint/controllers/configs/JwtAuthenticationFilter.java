@@ -31,6 +31,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
+        // 1) No aplicar JWT a las rutas públicas de auth
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/v1/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 2) Si no hay Authorization: Bearer, seguir sin autenticar
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -38,7 +46,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String userEmail = jwtService.extractUsername(jwt);
+
+        String userEmail = null;
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+        } catch (Exception ignored) {
+            // Token mal formado / cabecera con caracteres raros -> continuar como anónimo
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
