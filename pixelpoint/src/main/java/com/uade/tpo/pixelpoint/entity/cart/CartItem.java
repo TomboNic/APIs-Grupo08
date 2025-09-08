@@ -1,6 +1,7 @@
 package com.uade.tpo.pixelpoint.entity.cart;
 
 import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -30,5 +31,5 @@ public class CartItem {
     private int quantity;
 
     @Column(nullable = false)
-    private int unitPrice; // snapshot del precio al momento de agregar
+    private Float unitPrice; // snapshot del precio al momento de agregar
 }
