@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.uade.tpo.pixelpoint.entity.cart.Cart;
 import com.uade.tpo.pixelpoint.entity.cart.CartItem;
 import com.uade.tpo.pixelpoint.entity.dto.AddCartItemRequest;
+import com.uade.tpo.pixelpoint.entity.dto.CartItemResponse;
+import com.uade.tpo.pixelpoint.entity.dto.CartResponse;
 import com.uade.tpo.pixelpoint.entity.dto.CreateCartRequest;
 import com.uade.tpo.pixelpoint.entity.dto.UpdateCartItemRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
@@ -56,20 +58,23 @@ public class CartController {
     // GET /carts?page=0&size=20
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<Cart>> getCarts(
+    public ResponseEntity<Page<CartResponse>> getCarts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<Cart> carts = cartRepository.findAll(PageRequest.of(page, size));
-        return ResponseEntity.ok(carts);
+        Page<CartResponse> cartsResponse = carts.map(this::toCartResponse);
+        return ResponseEntity.ok(cartsResponse);
     }
 
     // GET /carts/{id}
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<Cart> getCartById(@PathVariable Long id) {
+    public ResponseEntity<CartResponse> getCartById(@PathVariable Long id) {
         Optional<Cart> opt = cartRepository.findById(id);
-        return opt.map(ResponseEntity::ok)
-                  .orElseGet(() -> ResponseEntity.notFound().build());
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(toCartResponse(opt.get()));
     }
 
     // POST /carts
@@ -101,7 +106,7 @@ public class CartController {
     // POST /carts/{cartId}/items
     @PostMapping("/{cartId}/items")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<CartItem> addItemToCart(
+    public ResponseEntity<CartItemResponse> addItemToCart(
             @PathVariable Long cartId, 
             @RequestBody AddCartItemRequest request) {
         
@@ -155,7 +160,7 @@ public class CartController {
         try {
             CartItem saved = cartItemsRepository.save(cartItem);
             logger.info("Cart item saved successfully: {}", saved.getId());
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(toCartItemResponse(saved));
         } catch (Exception e) {
             logger.error("Error saving cart item", e);
             return ResponseEntity.badRequest().build();
@@ -165,7 +170,7 @@ public class CartController {
     // GET /carts/{cartId}/items
     @GetMapping("/{cartId}/items")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<List<CartItem>> getCartItems(@PathVariable Long cartId) {
+    public ResponseEntity<List<CartItemResponse>> getCartItems(@PathVariable Long cartId) {
         // Verificar que el carrito existe
         Optional<Cart> cartOpt = cartRepository.findById(cartId);
         if (cartOpt.isEmpty()) {
@@ -173,7 +178,10 @@ public class CartController {
         }
 
         Cart cart = cartOpt.get();
-        return ResponseEntity.ok(cart.getItems());
+        List<CartItemResponse> items = cart.getItems().stream()
+                .map(this::toCartItemResponse)
+                .toList();
+        return ResponseEntity.ok(items);
     }
 
     // DELETE /carts/{cartId}/items/{itemId}
@@ -201,7 +209,7 @@ public class CartController {
     // PUT /carts/{cartId}/items/{itemId}
     @PutMapping("/{cartId}/items/{itemId}")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<CartItem> updateCartItem(
+    public ResponseEntity<CartItemResponse> updateCartItem(
             @PathVariable Long cartId, 
             @PathVariable Long itemId,
             @RequestBody UpdateCartItemRequest request) {
@@ -226,7 +234,7 @@ public class CartController {
         item.setQuantity(request.getQuantity());
         
         CartItem updated = cartItemsRepository.save(item);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(toCartItemResponse(updated));
     }
 
     // DELETE /carts/{id}
@@ -236,5 +244,61 @@ public class CartController {
         if (!cartRepository.existsById(id)) return ResponseEntity.notFound().build();
         cartRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Método helper para convertir CartItem a CartItemResponse
+    private CartItemResponse toCartItemResponse(CartItem cartItem) {
+        CartItemResponse response = new CartItemResponse();
+        response.setItemId(cartItem.getId());
+        response.setListingId(cartItem.getListing().getId());
+        response.setQuantity(cartItem.getQuantity());
+        response.setUnitPrice(cartItem.getUnitPrice());
+        response.setSubtotal(cartItem.getUnitPrice() * cartItem.getQuantity());
+        
+        // Construir título del producto
+        try {
+            Listing listing = cartItem.getListing();
+            if (listing != null && listing.getVariant() != null) {
+                var variant = listing.getVariant();
+                var deviceModel = variant.getDeviceModel();
+                var brand = deviceModel.getBrand();
+                
+                String title = String.format("%s %s - %dGB RAM/%dGB - %s (%s)", 
+                    brand.getName(),
+                    deviceModel.getModelName(),
+                    variant.getRam(),
+                    variant.getStorage(),
+                    variant.getColor(),
+                    variant.getCondition().toString()
+                );
+                response.setTitle(title);
+            } else {
+                response.setTitle("Producto ID: " + cartItem.getListing().getId());
+            }
+        } catch (Exception e) {
+            response.setTitle("Producto ID: " + cartItem.getListing().getId());
+        }
+        
+        return response;
+    }
+
+    // Método helper para convertir Cart a CartResponse
+    private CartResponse toCartResponse(Cart cart) {
+        CartResponse response = new CartResponse();
+        response.setCartId(cart.getId());
+        
+        // Convertir items a DTOs
+        List<CartItemResponse> items = cart.getItems().stream()
+                .map(this::toCartItemResponse)
+                .toList();
+        response.setItems(items);
+        
+        // Calcular total
+        float total = (float) items.stream()
+                .mapToDouble(CartItemResponse::getSubtotal)
+                .sum();
+        response.setTotal(new java.math.BigDecimal(total));
+        
+        return response;
     }
 }

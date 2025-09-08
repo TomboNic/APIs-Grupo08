@@ -7,6 +7,6 @@ public class CartItemResponse {
     private Long listingId;
     private String title;           
     private int quantity;
-    private float unitPrice;
-    private float subtotal;
+    private Float unitPrice;
+    private Float subtotal;
 }
