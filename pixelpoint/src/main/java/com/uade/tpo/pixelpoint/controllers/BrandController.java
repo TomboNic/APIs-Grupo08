@@ -1,19 +1,8 @@
 package com.uade.tpo.pixelpoint.controllers;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import com.uade.tpo.pixelpoint.entity.catalog.Brand;
-import com.uade.tpo.pixelpoint.services.BrandService;
-
-import jakarta.annotation.security.PermitAll;
-
-import com.uade.tpo.exceptions.BrandDuplicateException;
-import com.uade.tpo.pixelpoint.entity.dto.BrandRequest;
-import com.uade.tpo.pixelpoint.repository.catalog.BrandRepository;
-
 import java.net.URI;
 import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +14,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.uade.tpo.exceptions.BrandDuplicateException;
+import com.uade.tpo.pixelpoint.entity.catalog.Brand;
+import com.uade.tpo.pixelpoint.entity.dto.BrandRequest;
+import com.uade.tpo.pixelpoint.repository.catalog.BrandRepository;
+import com.uade.tpo.pixelpoint.services.BrandService;
+
+import jakarta.annotation.security.PermitAll;
 
 @RestController
 @RequestMapping("brands")
@@ -57,7 +57,7 @@ public class BrandController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     public ResponseEntity<Object> createBrand(@RequestBody BrandRequest brandRequest)
             throws BrandDuplicateException {
         Brand result = brandService.createBrand(brandRequest.getName());
@@ -66,7 +66,7 @@ public class BrandController {
 
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     public ResponseEntity<Brand> updateBrand(@PathVariable Long id, @RequestBody BrandRequest request) {
         Optional<Brand> opt = brandRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
@@ -77,10 +77,10 @@ public class BrandController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     public ResponseEntity<Void> deleteBrand(@PathVariable Long id) {
         if (!brandRepository.existsById(id)) return ResponseEntity.notFound().build();
         brandRepository.deleteById(id);
-        return ResponseEntity.noContent().build(); 
+        return ResponseEntity.noContent().build();
     }
 }

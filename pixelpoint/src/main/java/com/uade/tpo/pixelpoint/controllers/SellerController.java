@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.security.core.Authentication;
+
 import com.uade.tpo.pixelpoint.entity.dto.SellerRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.Seller;
 import com.uade.tpo.pixelpoint.services.SellerService;
@@ -75,6 +76,7 @@ public class SellerController {
 
     // PUT /seller/{id} - Actualizar seller existente
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     public ResponseEntity<Seller> updateSeller(@PathVariable Long id, @RequestBody SellerRequest request) {
         if (request == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -99,6 +101,7 @@ public class SellerController {
 
     // DELETE /seller/{id} - Eliminar seller
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     public ResponseEntity<Void> deleteSeller(@PathVariable Long id) {
         Optional<Seller> sellerOpt = sellerService.getSellerById(id);
         if (sellerOpt.isEmpty()) {
