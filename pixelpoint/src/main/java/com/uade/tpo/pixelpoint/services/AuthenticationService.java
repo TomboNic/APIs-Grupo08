@@ -1,5 +1,4 @@
 package com.uade.tpo.pixelpoint.services;
-import java.nio.file.AccessDeniedException;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -8,13 +7,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import com.uade.tpo.pixelpoint.entity.dto.AuthenticationRequest;
 import com.uade.tpo.pixelpoint.entity.dto.AuthenticationResponse;
 import com.uade.tpo.pixelpoint.entity.dto.RegisterRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.*;
 import com.uade.tpo.pixelpoint.repository.marketplace.UserRepository;
-
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -26,31 +23,23 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public AuthenticationResponse register(RegisterRequest req) throws AccessDeniedException {
-        // Rol solicitado (si no viene, por defecto BUYER)
+    public AuthenticationResponse register(RegisterRequest req) {
+        // Si no mandan rol, default BUYER
         Role requested = req.getRole() != null ? req.getRole() : Role.BUYER;
 
-        // Solo ADMIN puede crear SELLER o ADMIN
-        if (requested == Role.SELLER || requested == Role.ADMIN) {
-            if (!currentUserHasAdminRole()) {
-                throw new AccessDeniedException("Solo ADMIN puede crear ADMIN o SELLER");
-            }
-        }
+        // ⚠️ Quitamos la restricción de ADMIN
+        // (antes: si requested == SELLER/ADMIN -> requería ADMIN logueado)
 
-        // Construcción del usuario
         User user = new User();
-        user.setFirstName(req.getFirstname());
+        user.setFirstName(req.getFirstname()); // ojo con el nombre del campo en el DTO
         user.setLastName(req.getLastname());
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(requested);
 
-        // Persistir
         repository.save(user);
 
-        // Generar JWT
         String jwtToken = jwtService.generateToken(user);
-
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .build();

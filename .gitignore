@@ -1,2 +1,4 @@
 /.idea
 /pixelpoint/src/main/resources
+pixelpoint/pom.xml
+pixelpoint/src/main/resources/application.properties
