@@ -13,7 +13,6 @@ import com.uade.tpo.pixelpoint.entity.dto.ListingRequest;
 import com.uade.tpo.pixelpoint.entity.dto.ListingResponse;
 import com.uade.tpo.pixelpoint.services.ListingService;
 
-
 @RestController
 @RequestMapping("listings")
 public class ListingController {
@@ -34,7 +33,7 @@ public class ListingController {
     public ResponseEntity<ListingResponse> getById(@PathVariable Long id) {
         Optional<Listing> opt = listingService.getById(id);
         return opt.map(l -> ResponseEntity.ok(toResponse(l)))
-                  .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -44,8 +43,11 @@ public class ListingController {
                 req.getVariantId(),
                 req.getPrice(),
                 req.getStock(),
-                req.getActive()
-        );
+                req.getActive(),
+                req.getDiscountType(),
+                req.getDiscountValue(),
+                req.getDiscountActive());
+
         return ResponseEntity
                 .created(URI.create("/listings/" + created.getId()))
                 .body(toResponse(created));
@@ -58,28 +60,34 @@ public class ListingController {
                 req.getPrice(),
                 req.getStock(),
                 req.getActive(),
-                req.getSellerId()
-        );
+                req.getSellerId(),
+                req.getDiscountType(),
+                req.getDiscountValue(),
+                req.getDiscountActive());
         return ResponseEntity.ok(toResponse(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id,
-                                       @RequestParam Long sellerId) {
+            @RequestParam Long sellerId) {
         listingService.delete(id, sellerId);
         return ResponseEntity.noContent().build();
     }
 
     private ListingResponse toResponse(Listing l) {
-        ListingResponse r = new ListingResponse();
-        r.setId(l.getId());
-        r.setPrice(l.getPrice());
-        r.setStock(l.getStock());
-        r.setActive(l.getActive());
+        ListingResponse resp = new ListingResponse();
+        resp.setId(l.getId());
+        resp.setPrice(l.getPrice());
+        resp.setStock(l.getStock());
+        resp.setActive(l.getActive());
+        resp.setVariantId(l.getVariant() != null ? l.getVariant().getId() : null);
+        resp.setSellerId(l.getSeller() != null ? l.getSeller().getId() : null);
 
-        try { r.setSellerId(l.getSeller().getId()); } catch (Exception ignored) {}
-        try { r.setVariantId(l.getVariant().getId()); } catch (Exception ignored) {}
-
-        return r;
+        // Descuentos
+        resp.setDiscountType(l.getDiscountType());
+        resp.setDiscountValue(l.getDiscountValue());
+        resp.setDiscountActive(l.getDiscountActive());
+        resp.setEffectivePrice(l.getEffectivePrice());
+        return resp;
     }
 }

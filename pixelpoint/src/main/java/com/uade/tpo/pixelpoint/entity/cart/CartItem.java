@@ -19,11 +19,11 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "listing_id", nullable = false)
     private Listing listing;
 
@@ -31,5 +31,5 @@ public class CartItem {
     private int quantity;
 
     @Column(nullable = false)
-    private Float unitPrice; // snapshot del precio al momento de agregar
+    private Double unitPrice; // <- sin inicializar aquí
 }

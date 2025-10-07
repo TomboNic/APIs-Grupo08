@@ -143,7 +143,6 @@ public class CartController {
 
         CartItem cartItem;
         if (existingItemOpt.isPresent()) {
-            // Si ya existe, actualizar la cantidad
             logger.info("Updating existing cart item");
             cartItem = existingItemOpt.get();
             cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
@@ -154,7 +153,7 @@ public class CartController {
             cartItem.setCart(cart);
             cartItem.setListing(listing);
             cartItem.setQuantity(request.getQuantity());
-            cartItem.setUnitPrice(listing.getPrice()); // snapshot del precio actual
+            cartItem.setUnitPrice(listing.getEffectivePrice().doubleValue()); 
             logger.info("New cart item created with price: {}", listing.getPrice());
         }
 
