@@ -1,5 +1,5 @@
 // src/main/java/com/uade/tpo/pixelpoint/controllers/config/JwtService.java
-package com.uade.tpo.JWT.services;
+package com.uade.tpo.pixelpoint.JWT.services;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;

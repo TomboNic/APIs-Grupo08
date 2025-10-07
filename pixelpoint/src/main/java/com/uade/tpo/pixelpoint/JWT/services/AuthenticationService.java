@@ -1,4 +1,4 @@
-package com.uade.tpo.JWT.services;
+package com.uade.tpo.pixelpoint.JWT.services;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -6,8 +6,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.uade.tpo.JWT.dto.AuthenticationRequest;
-import com.uade.tpo.JWT.dto.AuthenticationResponse;
+import com.uade.tpo.pixelpoint.JWT.dto.AuthenticationRequest;
+import com.uade.tpo.pixelpoint.JWT.dto.AuthenticationResponse;
 import com.uade.tpo.pixelpoint.entity.dto.RegisterRequest;
 import com.uade.tpo.pixelpoint.entity.marketplace.*;
 import com.uade.tpo.pixelpoint.repository.marketplace.UserRepository;

@@ -1,4 +1,4 @@
-package com.uade.tpo.JWT.dto;
+package com.uade.tpo.pixelpoint.JWT.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

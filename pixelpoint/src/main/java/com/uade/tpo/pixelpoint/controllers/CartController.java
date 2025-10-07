@@ -1,8 +1,8 @@
 package com.uade.tpo.pixelpoint.controllers;
 
-
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,7 +37,6 @@ import com.uade.tpo.pixelpoint.repository.cart.CartRepository;
 import com.uade.tpo.pixelpoint.repository.marketplace.ListingRepository;
 import com.uade.tpo.pixelpoint.repository.marketplace.UserRepository;
 
-
 @RestController
 @RequestMapping("carts")
 public class CartController {
@@ -45,13 +45,13 @@ public class CartController {
 
     @Autowired
     private CartRepository cartRepository;
-    
+
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private CartItemsRepository cartItemsRepository;
-    
+
     @Autowired
     private ListingRepository listingRepository;
 
@@ -93,25 +93,25 @@ public class CartController {
         }
 
         User user = userOpt.get();
-        
+
         // Crear el carrito
         Cart cart = new Cart();
         cart.setUser(user);
-        
+
         Cart created = cartRepository.save(cart);
         return ResponseEntity.created(URI.create("/carts/" + created.getId()))
-                             .body(created);
+                .body(created);
     }
 
     // POST /carts/{cartId}/items
     @PostMapping("/{cartId}/items")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
     public ResponseEntity<CartItemResponse> addItemToCart(
-            @PathVariable Long cartId, 
+            @PathVariable Long cartId,
             @RequestBody AddCartItemRequest request) {
-        
+
         logger.info("Adding item to cart. CartId: {}, Request: {}", cartId, request);
-        
+
         // Validar que se proporcionaron los datos necesarios
         if (request == null || request.getListingId() == null || request.getQuantity() <= 0) {
             logger.warn("Invalid request: {}", request);
@@ -134,12 +134,13 @@ public class CartController {
 
         Cart cart = cartOpt.get();
         Listing listing = listingOpt.get();
-        
+
         logger.info("Found cart: {} and listing: {}", cart.getId(), listing.getId());
 
         // Verificar si ya existe un item con este listing en el carrito
-        Optional<CartItem> existingItemOpt = cartItemsRepository.findByCartIdAndListingId(cartId, request.getListingId());
-        
+        Optional<CartItem> existingItemOpt = cartItemsRepository.findByCartIdAndListingId(cartId,
+                request.getListingId());
+
         CartItem cartItem;
         if (existingItemOpt.isPresent()) {
             // Si ya existe, actualizar la cantidad
@@ -187,33 +188,31 @@ public class CartController {
     // DELETE /carts/{cartId}/items/{itemId}
     @DeleteMapping("/{cartId}/items/{itemId}")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<Void> removeItemFromCart(
-            @PathVariable Long cartId, 
+    public ResponseEntity<Map<String, String>> removeItemFromCart(
+            @PathVariable Long cartId,
             @PathVariable Long itemId) {
-        
-        // Verificar que el carrito existe
+
         if (!cartRepository.existsById(cartId)) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        // Verificar que el item existe y pertenece al carrito
         Optional<CartItem> itemOpt = cartItemsRepository.findById(itemId);
         if (itemOpt.isEmpty() || !itemOpt.get().getCart().getId().equals(cartId)) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
         cartItemsRepository.deleteById(itemId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Item eliminado del carrito"));
     }
 
     // PUT /carts/{cartId}/items/{itemId}
     @PutMapping("/{cartId}/items/{itemId}")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
     public ResponseEntity<CartItemResponse> updateCartItem(
-            @PathVariable Long cartId, 
+            @PathVariable Long cartId,
             @PathVariable Long itemId,
             @RequestBody UpdateCartItemRequest request) {
-        
+
         // Validar que se proporcionó una cantidad válida
         if (request == null || request.getQuantity() <= 0) {
             return ResponseEntity.badRequest().build();
@@ -232,18 +231,20 @@ public class CartController {
 
         CartItem item = itemOpt.get();
         item.setQuantity(request.getQuantity());
-        
+
         CartItem updated = cartItemsRepository.save(item);
         return ResponseEntity.ok(toCartItemResponse(updated));
     }
 
-    // DELETE /carts/{id}
+    /// DELETE /carts/{id}
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteCart(@PathVariable Long id) {
-        if (!cartRepository.existsById(id)) return ResponseEntity.notFound().build();
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<Map<String, String>> deleteCart(@PathVariable Long id) {
+        if (!cartRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
         cartRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Carrito vaciado correctamente"));
     }
 
     // Método helper para convertir CartItem a CartItemResponse
@@ -254,7 +255,7 @@ public class CartController {
         response.setQuantity(cartItem.getQuantity());
         response.setUnitPrice(cartItem.getUnitPrice());
         response.setSubtotal(cartItem.getUnitPrice() * cartItem.getQuantity());
-        
+
         // Construir título del producto
         try {
             Listing listing = cartItem.getListing();
@@ -262,15 +263,14 @@ public class CartController {
                 var variant = listing.getVariant();
                 var deviceModel = variant.getDeviceModel();
                 var brand = deviceModel.getBrand();
-                
-                String title = String.format("%s %s - %dGB RAM/%dGB - %s (%s)", 
-                    brand.getName(),
-                    deviceModel.getModelName(),
-                    variant.getRam(),
-                    variant.getStorage(),
-                    variant.getColor(),
-                    variant.getCondition().toString()
-                );
+
+                String title = String.format("%s %s - %dGB RAM/%dGB - %s (%s)",
+                        brand.getName(),
+                        deviceModel.getModelName(),
+                        variant.getRam(),
+                        variant.getStorage(),
+                        variant.getColor(),
+                        variant.getCondition().toString());
                 response.setTitle(title);
             } else {
                 response.setTitle("Producto ID: " + cartItem.getListing().getId());
@@ -278,7 +278,7 @@ public class CartController {
         } catch (Exception e) {
             response.setTitle("Producto ID: " + cartItem.getListing().getId());
         }
-        
+
         return response;
     }
 
@@ -286,19 +286,19 @@ public class CartController {
     private CartResponse toCartResponse(Cart cart) {
         CartResponse response = new CartResponse();
         response.setCartId(cart.getId());
-        
+
         // Convertir items a DTOs
         List<CartItemResponse> items = cart.getItems().stream()
                 .map(this::toCartItemResponse)
                 .toList();
         response.setItems(items);
-        
+
         // Calcular total
         float total = (float) items.stream()
                 .mapToDouble(CartItemResponse::getSubtotal)
                 .sum();
         response.setTotal(new java.math.BigDecimal(total));
-        
+
         return response;
     }
 }

@@ -1,5 +1,5 @@
 // src/main/java/com/uade/tpo/pixelpoint/controllers/config/ApplicationConfig.java
-package com.uade.tpo.JWT.configs;
+package com.uade.tpo.pixelpoint.JWT.configs;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

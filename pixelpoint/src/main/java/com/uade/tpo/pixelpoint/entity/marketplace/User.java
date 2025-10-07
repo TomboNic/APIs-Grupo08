@@ -39,7 +39,7 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role; // BUYER | SELLER | ADMIN
+    private Role role; 
 
     // ====== UserDetails ======
     @Override

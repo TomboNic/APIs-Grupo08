@@ -1,4 +1,4 @@
-package com.uade.tpo.JWT.configs;
+package com.uade.tpo.pixelpoint.JWT.configs;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

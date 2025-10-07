@@ -1,12 +1,12 @@
-package com.uade.tpo.JWT.configs;
+package com.uade.tpo.pixelpoint.JWT.configs;
 
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.uade.tpo.JWT.dto.AuthenticationRequest;
-import com.uade.tpo.JWT.dto.AuthenticationResponse;
-import com.uade.tpo.JWT.services.AuthenticationService;
+import com.uade.tpo.pixelpoint.JWT.dto.AuthenticationRequest;
+import com.uade.tpo.pixelpoint.JWT.dto.AuthenticationResponse;
+import com.uade.tpo.pixelpoint.JWT.services.AuthenticationService;
 import com.uade.tpo.pixelpoint.entity.dto.RegisterRequest;
 
 import lombok.RequiredArgsConstructor;
