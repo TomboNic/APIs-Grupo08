@@ -1,5 +1,5 @@
 // src/main/java/com/uade/tpo/pixelpoint/controllers/config/JwtAuthenticationFilter.java
-package com.uade.tpo.pixelpoint.controllers.configs;
+package com.uade.tpo.JWT.configs;
 import java.io.IOException;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -8,8 +8,9 @@ import org.springframework.security.core.userdetails.*;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.uade.tpo.JWT.services.JwtService;
 import com.uade.tpo.pixelpoint.entity.marketplace.User;
-import com.uade.tpo.pixelpoint.services.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
