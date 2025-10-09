@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.uade.tpo.pixelpoint.entity.cart.Cart;
 import com.uade.tpo.pixelpoint.entity.cart.CartItem;
+import com.uade.tpo.pixelpoint.entity.cart.Order;
 import com.uade.tpo.pixelpoint.entity.dto.CartItemResponse;
 import com.uade.tpo.pixelpoint.entity.dto.CartResponse;
 import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
@@ -35,6 +36,9 @@ public class CartServiceImpl implements CartService {
 
     @Autowired
     private ListingRepository listingRepository;
+
+    @Autowired
+    private OrderService orderService;
 
     @Override
     public Cart getOrCreateCartByUserId(Long userId) {
@@ -194,4 +198,10 @@ public class CartServiceImpl implements CartService {
             throw new RuntimeException("Solo los usuarios BUYER pueden tener carrito de compras");
         }
     }
+
+    @Override
+    public Order checkout(Long userId) {
+        return orderService.createFromCart(userId);
+    }
+    
 }
