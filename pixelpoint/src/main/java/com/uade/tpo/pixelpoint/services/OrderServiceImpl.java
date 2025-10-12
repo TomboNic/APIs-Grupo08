@@ -2,6 +2,7 @@ package com.uade.tpo.pixelpoint.services;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -35,56 +36,85 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
 
     public Order createFromCart(Long userId) {
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException("No se encontró el carrito del usuario " + userId));
+    // 1) Obtener carrito del usuario
+    Cart cart = cartRepository.findByUserId(userId)
+        .orElseThrow(() -> new IllegalStateException("No se encontró el carrito del usuario " + userId));
 
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new IllegalStateException("El carrito está vacío");
-        }
-
-        Order order = new Order();
-        order.setBuyer(cart.getUser());
-        order.setOrderNumber(generateOrderNumber());
-
-        // ✅ FIX: enum externo
-        order.setStatus(OrderStatus.PENDING_PAYMENT);
-
-        double subtotal = 0.0;
-
-        for (CartItem ci : cart.getItems()) {
-            Listing listing = ci.getListing();
-
-            OrderItem oi = new OrderItem();
-            oi.setOrder(order);
-            oi.setListingId(listing.getId());
-            oi.setSellerId(listing.getSeller().getId());
-            oi.setTitle(buildItemTitle(listing));
-            double unit = listing.getEffectivePrice() != null
-                    ? listing.getEffectivePrice().doubleValue()
-                    : (listing.getPrice() != null ? listing.getPrice().doubleValue() : 0.0);
-            oi.setUnitPrice(unit);
-            oi.setQuantity(ci.getQuantity());
-            oi.setLineTotal(unit * ci.getQuantity());
-
-            order.getItems().add(oi);
-            subtotal += oi.getLineTotal();
-        }
-
-        order.setSubtotal(subtotal);
-        order.setDiscountTotal(0.0);
-        order.setTaxTotal(0.0);
-        order.setGrandTotal(subtotal);
-
-        Order saved = orderRepository.save(order);
-
-        // Opcional: borrar/vaciar carrito tras checkout
-        cartRepository.findByUserId(userId).ifPresent(c -> {
-            cartItemsRepository.deleteByCartId(c.getId());
-            cartRepository.delete(c);
-        });
-
-        return saved;
+    if (cart.getItems() == null || cart.getItems().isEmpty()) {
+        throw new IllegalStateException("El carrito está vacío");
     }
+
+    // 2) Crear orden base
+    Order order = new Order();
+    order.setBuyer(cart.getUser());
+    order.setOrderNumber(generateOrderNumber());
+    order.setStatus(OrderStatus.PENDING_PAYMENT);
+
+    if (order.getItems() == null) {
+        order.setItems(new ArrayList<>());
+    }
+
+    double subtotal = 0.0;
+
+    // 3) Recorrer ítems y descontar stock de forma atómica
+    for (CartItem ci : cart.getItems()) {
+        Listing listing = ci.getListing();
+        if (listing == null) {
+            throw new IllegalStateException("Item de carrito sin listing asociado");
+        }
+
+        int qty = ci.getQuantity();
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Cantidad inválida para el listing " + listing.getId());
+        }
+
+        // Descuento atómico de stock (asegúrate de tener ListingRepository.decrementStock(listingId, qty))
+        int affected = listingRepository.decrementStock(listing.getId(), qty);
+        if (affected == 0) {
+            throw new IllegalStateException("Stock insuficiente para listing " + listing.getId());
+        }
+
+        // Precio efectivo (si no hay descuento, usar price)
+        double unit = 0.0;
+        if (listing.getEffectivePrice() != null) {
+            unit = listing.getEffectivePrice().doubleValue();
+        } else if (listing.getPrice() != null) {
+            unit = listing.getPrice().doubleValue();
+        }
+
+        // Crear OrderItem
+        if (listing.getSeller() == null || listing.getSeller().getId() == null) {
+            throw new IllegalStateException("El listing " + listing.getId() + " no tiene seller asociado");
+        }
+
+        OrderItem oi = new OrderItem();
+        oi.setOrder(order);
+        oi.setListingId(listing.getId());
+        oi.setSellerId(listing.getSeller().getId());
+        oi.setTitle(buildItemTitle(listing));
+        oi.setUnitPrice(unit);
+        oi.setQuantity(qty);
+        oi.setLineTotal(unit * qty);
+
+        order.getItems().add(oi);
+        subtotal += oi.getLineTotal();
+    }
+
+    // 4) Totales
+    order.setSubtotal(subtotal);
+    order.setDiscountTotal(0.0);
+    order.setTaxTotal(0.0);
+    order.setGrandTotal(subtotal);
+
+    // 5) Guardar orden
+    Order saved = orderRepository.save(order);
+
+    // 6) Vaciar y borrar carrito
+    cartItemsRepository.deleteByCartId(cart.getId());
+    cartRepository.delete(cart);
+
+    return saved;
+}
 
     @Override
     @Transactional(readOnly = true)

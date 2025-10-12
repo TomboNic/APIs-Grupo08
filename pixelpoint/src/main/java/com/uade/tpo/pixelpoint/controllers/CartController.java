@@ -36,6 +36,7 @@ import com.uade.tpo.pixelpoint.repository.cart.CartItemsRepository;
 import com.uade.tpo.pixelpoint.repository.cart.CartRepository;
 import com.uade.tpo.pixelpoint.repository.marketplace.ListingRepository;
 import com.uade.tpo.pixelpoint.repository.marketplace.UserRepository;
+import com.uade.tpo.pixelpoint.services.CartService;
 
 @RestController
 @RequestMapping("carts")
@@ -54,6 +55,9 @@ public class CartController {
 
     @Autowired
     private ListingRepository listingRepository;
+
+    @Autowired
+    private CartService cartService;
 
     // GET /carts?page=0&size=20
     @GetMapping
@@ -80,30 +84,24 @@ public class CartController {
     // POST /carts
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
-    public ResponseEntity<Cart> createCart(@RequestBody CreateCartRequest request) {
-        // Verificar que se proporcionó un userId
+    public ResponseEntity<CartResponse> createCart(@RequestBody CreateCartRequest request) {
         if (request == null || request.getUserId() == null) {
             return ResponseEntity.badRequest().build();
         }
 
-        // Buscar el usuario
         Optional<User> userOpt = userRepository.findById(request.getUserId());
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
 
-        User user = userOpt.get();
-
-        // Crear el carrito
         Cart cart = new Cart();
-        cart.setUser(user);
-
+        cart.setUser(userOpt.get());
         Cart created = cartRepository.save(cart);
+
         return ResponseEntity.created(URI.create("/carts/" + created.getId()))
-                .body(created);
+                .body(toCartResponse(created)); // ✅ devuelve DTO sin datos sensibles
     }
 
-    // POST /carts/{cartId}/items
     @PostMapping("/{cartId}/items")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
     public ResponseEntity<CartItemResponse> addItemToCart(
@@ -112,59 +110,56 @@ public class CartController {
 
         logger.info("Adding item to cart. CartId: {}, Request: {}", cartId, request);
 
-        // Validar que se proporcionaron los datos necesarios
+        // ✅ Validación (sin null-check para int)
         if (request == null || request.getListingId() == null || request.getQuantity() <= 0) {
             logger.warn("Invalid request: {}", request);
             return ResponseEntity.badRequest().build();
         }
 
-        // Verificar que el carrito existe
+        // ✅ Cargar cart y listing para validar existencia y obtener userId real
         Optional<Cart> cartOpt = cartRepository.findById(cartId);
         if (cartOpt.isEmpty()) {
             logger.warn("Cart not found: {}", cartId);
             return ResponseEntity.notFound().build();
         }
+        Cart cart = cartOpt.get();
 
-        // Verificar que el listing existe
         Optional<Listing> listingOpt = listingRepository.findById(request.getListingId());
         if (listingOpt.isEmpty()) {
             logger.warn("Listing not found: {}", request.getListingId());
             return ResponseEntity.badRequest().build();
         }
-
-        Cart cart = cartOpt.get();
         Listing listing = listingOpt.get();
 
-        logger.info("Found cart: {} and listing: {}", cart.getId(), listing.getId());
-
-        // Verificar si ya existe un item con este listing en el carrito
-        Optional<CartItem> existingItemOpt = cartItemsRepository.findByCartIdAndListingId(cartId,
-                request.getListingId());
-
-        CartItem cartItem;
-        if (existingItemOpt.isPresent()) {
-            logger.info("Updating existing cart item");
-            cartItem = existingItemOpt.get();
-            cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
-        } else {
-            // Si no existe, crear nuevo item
-            logger.info("Creating new cart item");
-            cartItem = new CartItem();
-            cartItem.setCart(cart);
-            cartItem.setListing(listing);
-            cartItem.setQuantity(request.getQuantity());
-            cartItem.setUnitPrice(listing.getEffectivePrice().doubleValue()); 
-            logger.info("New cart item created with price: {}", listing.getPrice());
-        }
-
         try {
-            CartItem saved = cartItemsRepository.save(cartItem);
+            // ✅ Toda la lógica (incluida validación de stock) en el Service
+            Long userId = cart.getUser().getId();
+            cartService.addItemToCart(userId, request.getListingId(), request.getQuantity());
+
+            // ✅ Leer el ítem desde la DB para responder (evita problemas de lazy)
+            CartItem saved = cartItemsRepository
+                    .findByCartIdAndListingId(cartId, request.getListingId())
+                    .orElseThrow(() -> new IllegalStateException("Item not found after save"));
+
             logger.info("Cart item saved successfully: {}", saved.getId());
             return ResponseEntity.ok(toCartItemResponse(saved));
-        } catch (Exception e) {
-            logger.error("Error saving cart item", e);
+
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            logger.warn("Business error adding item to cart: {}", ex.getMessage());
             return ResponseEntity.badRequest().build();
+        } catch (Exception ex) {
+            logger.error("Unexpected error adding item to cart", ex);
+            return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * ⚠️ IMPLEMENTAR según tu autenticación (JWT, SecurityContext, etc.)
+     * Ejemplo temporal: devolver un ID fijo para pruebas.
+     */
+    private Long getCurrentUserId() {
+        // Ejemplo temporal (reemplazar por tu método real)
+        return 15L;
     }
 
     // GET /carts/{cartId}/items

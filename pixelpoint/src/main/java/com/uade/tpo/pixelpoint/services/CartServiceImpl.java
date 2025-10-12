@@ -71,7 +71,7 @@ public class CartServiceImpl implements CartService {
         return cartRepository.findAll(pageRequest);
     }
 
-    @Override
+    @Transactional
     public Cart addItemToCart(Long userId, Long listingId, int quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("La cantidad debe ser mayor a 0");
@@ -79,26 +79,50 @@ public class CartServiceImpl implements CartService {
 
         Cart cart = getOrCreateCartByUserId(userId);
 
-        // Verificar que el listing existe
+        // Verificar listing
         Listing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new RuntimeException("Listing no encontrado con ID: " + listingId));
+
+        Integer stockObj = listing.getStock();
+        int stock = (stockObj == null) ? 0 : stockObj;
+        if (stock <= 0) {
+            throw new IllegalArgumentException("No hay stock disponible para el listing " + listing.getId());
+        }
 
         // Buscar si ya existe el item en el carrito
         Optional<CartItem> existingItem = cartItemsRepository.findByCartIdAndListingId(cart.getId(), listingId);
 
+        // ⚠️ Usar la cantidad actual del registro existente (si lo hay), NO
+        // cart.getItems()
+        int currentQty = existingItem.map(CartItem::getQuantity).orElse(0);
+        int requestedTotal = currentQty + quantity;
+
+        if (requestedTotal > stock) {
+            throw new IllegalArgumentException(
+                    "No hay suficiente stock. Stock: " + stock + ", ya en carrito: " + currentQty
+                            + ", intento agregar: " + quantity);
+        }
+
+        // Precio unitario efectivo
+        double unit = (listing.getEffectivePrice() != null)
+                ? listing.getEffectivePrice().doubleValue()
+                : (listing.getPrice() != null ? listing.getPrice().doubleValue() : 0.0);
+
         if (existingItem.isPresent()) {
-            // Actualizar cantidad existente
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
+            item.setQuantity(requestedTotal); // consolidar total validado
+            item.setUnitPrice(unit); // opcional: refrescar precio
             cartItemsRepository.save(item);
         } else {
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
             newItem.setListing(listing);
             newItem.setQuantity(quantity);
-            newItem.setUnitPrice(listing.getEffectivePrice().doubleValue());
+            newItem.setUnitPrice(unit);
             cartItemsRepository.save(newItem);
         }
+
+        // devolver carrito actualizado
         return cartRepository.findById(cart.getId()).orElse(cart);
     }
 
@@ -112,6 +136,16 @@ public class CartServiceImpl implements CartService {
 
         CartItem item = cartItemsRepository.findByCartIdAndListingId(cart.getId(), listingId)
                 .orElseThrow(() -> new RuntimeException("Item no encontrado en el carrito"));
+
+        Listing listing = item.getListing();
+        if (listing == null) {
+            throw new IllegalStateException("El item no tiene listing asociado");
+        }
+
+        int stock = (listing.getStock());
+        if (newQuantity > stock) {
+            throw new IllegalArgumentException("No hay suficiente stock. Stock: " + stock + ", pedido: " + newQuantity);
+        }
 
         item.setQuantity(newQuantity);
         cartItemsRepository.save(item);
@@ -203,5 +237,4 @@ public class CartServiceImpl implements CartService {
     public Order checkout(Long userId) {
         return orderService.createFromCart(userId);
     }
-    
 }
