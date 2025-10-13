@@ -11,5 +11,4 @@ public class VariantsRequest {
     private int storage;
     private String color;
     private Condition condition;
-
 }

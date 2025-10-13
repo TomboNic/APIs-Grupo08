@@ -11,4 +11,7 @@ public class VariantsResponse {
     private int storage;
     private String color;
     private Condition condition;
+    private Long primaryImageId;  // null si no hay
+    private int imageCount;
+    private String primaryImageUrl;
 }
