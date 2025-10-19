@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication; // ✅ NUEVO
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,7 @@ import com.uade.tpo.pixelpoint.entity.dto.CartItemResponse;
 import com.uade.tpo.pixelpoint.entity.dto.CartResponse;
 import com.uade.tpo.pixelpoint.entity.dto.CreateCartRequest;
 import com.uade.tpo.pixelpoint.entity.dto.UpdateCartItemRequest;
+import com.uade.tpo.pixelpoint.entity.dto.UpdateQtyRequest; // ✅ si ya lo tenés, mantener
 import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
 import com.uade.tpo.pixelpoint.entity.marketplace.User;
 import com.uade.tpo.pixelpoint.repository.cart.CartItemsRepository;
@@ -129,7 +131,6 @@ public class CartController {
             logger.warn("Listing not found: {}", request.getListingId());
             return ResponseEntity.badRequest().build();
         }
-        Listing listing = listingOpt.get();
 
         try {
             // ✅ Toda la lógica (incluida validación de stock) en el Service
@@ -153,20 +154,80 @@ public class CartController {
         }
     }
 
-    /**
-     * ⚠️ IMPLEMENTAR según tu autenticación (JWT, SecurityContext, etc.)
-     * Ejemplo temporal: devolver un ID fijo para pruebas.
-     */
-    private Long getCurrentUserId() {
-        // Ejemplo temporal (reemplazar por tu método real)
-        return 15L;
+    // =========================
+    // ✅ NUEVO: Endpoints /carts/me (server-driven con JWT)
+    // =========================
+
+    /** Resuelve el ID del usuario autenticado usando el email del JWT */
+    private Long getCurrentUserId(Authentication auth) { // ✅ CAMBIADO (antes era dummy)
+        return userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + auth.getName()))
+                .getId();
     }
+
+    /** GET /carts/me → trae o crea el carrito del usuario autenticado */
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<CartResponse> getMyCart(Authentication auth) {
+        Long userId = getCurrentUserId(auth);
+        Cart cart = cartService.getOrCreateCartByUserId(userId);
+        return ResponseEntity.ok(cartService.convertToCartResponse(cart));
+    }
+
+    /** POST /carts/me/items → agrega/suma un item al carrito del usuario */
+    @PostMapping("/me/items")
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<CartResponse> addItemMe(Authentication auth,
+                                                  @RequestBody AddCartItemRequest request) {
+        if (request == null || request.getListingId() == null || request.getQuantity() <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long userId = getCurrentUserId(auth);
+        Cart cart = cartService.addItemToCart(userId, request.getListingId(), request.getQuantity());
+        return ResponseEntity.ok(cartService.convertToCartResponse(cart));
+    }
+
+    /** PUT /carts/me/items/{listingId} → actualiza cantidad del item */
+    @PutMapping("/me/items/{listingId}")
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<CartResponse> updateItemMe(Authentication auth,
+                                                     @PathVariable Long listingId,
+                                                     @RequestBody UpdateQtyRequest request) {
+        if (request == null || request.getQuantity() == null || request.getQuantity() <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long userId = getCurrentUserId(auth);
+        Cart cart = cartService.updateItemQuantity(userId, listingId, request.getQuantity());
+        return ResponseEntity.ok(cartService.convertToCartResponse(cart));
+    }
+
+    /** DELETE /carts/me/items/{listingId} → elimina el item del carrito */
+    @DeleteMapping("/me/items/{listingId}")
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<CartResponse> removeItemMe(Authentication auth,
+                                                     @PathVariable Long listingId) {
+        Long userId = getCurrentUserId(auth);
+        Cart cart = cartService.removeItemFromCart(userId, listingId);
+        return ResponseEntity.ok(cartService.convertToCartResponse(cart));
+    }
+
+    /** DELETE /carts/me → vacía el carrito del usuario autenticado */
+    @DeleteMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
+    public ResponseEntity<CartResponse> clearMyCart(Authentication auth) {
+        Long userId = getCurrentUserId(auth);
+        Cart cart = cartService.clearCart(userId);
+        return ResponseEntity.ok(cartService.convertToCartResponse(cart));
+    }
+
+    // =========================
+    // (lo demás queda igual)
+    // =========================
 
     // GET /carts/{cartId}/items
     @GetMapping("/{cartId}/items")
     @PreAuthorize("hasAnyRole('ADMIN','BUYER')")
     public ResponseEntity<List<CartItemResponse>> getCartItems(@PathVariable Long cartId) {
-        // Verificar que el carrito existe
         Optional<Cart> cartOpt = cartRepository.findById(cartId);
         if (cartOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -207,17 +268,14 @@ public class CartController {
             @PathVariable Long itemId,
             @RequestBody UpdateCartItemRequest request) {
 
-        // Validar que se proporcionó una cantidad válida
         if (request == null || request.getQuantity() <= 0) {
             return ResponseEntity.badRequest().build();
         }
 
-        // Verificar que el carrito existe
         if (!cartRepository.existsById(cartId)) {
             return ResponseEntity.notFound().build();
         }
 
-        // Verificar que el item existe y pertenece al carrito
         Optional<CartItem> itemOpt = cartItemsRepository.findById(itemId);
         if (itemOpt.isEmpty() || !itemOpt.get().getCart().getId().equals(cartId)) {
             return ResponseEntity.notFound().build();
@@ -241,7 +299,8 @@ public class CartController {
         return ResponseEntity.ok(Map.of("message", "Carrito vaciado correctamente"));
     }
 
-    // Método helper para convertir CartItem a CartItemResponse
+    // Helpers
+
     private CartItemResponse toCartItemResponse(CartItem cartItem) {
         CartItemResponse response = new CartItemResponse();
         response.setItemId(cartItem.getId());
@@ -250,14 +309,12 @@ public class CartController {
         response.setUnitPrice(cartItem.getUnitPrice());
         response.setSubtotal(cartItem.getUnitPrice() * cartItem.getQuantity());
 
-        // Construir título del producto
         try {
             Listing listing = cartItem.getListing();
             if (listing != null && listing.getVariant() != null) {
                 var variant = listing.getVariant();
                 var deviceModel = variant.getDeviceModel();
                 var brand = deviceModel.getBrand();
-
                 String title = String.format("%s %s - %dGB RAM/%dGB - %s (%s)",
                         brand.getName(),
                         deviceModel.getModelName(),
@@ -272,27 +329,20 @@ public class CartController {
         } catch (Exception e) {
             response.setTitle("Producto ID: " + cartItem.getListing().getId());
         }
-
         return response;
     }
 
-    // Método helper para convertir Cart a CartResponse
     private CartResponse toCartResponse(Cart cart) {
         CartResponse response = new CartResponse();
         response.setCartId(cart.getId());
-
-        // Convertir items a DTOs
         List<CartItemResponse> items = cart.getItems().stream()
                 .map(this::toCartItemResponse)
                 .toList();
         response.setItems(items);
-
-        // Calcular total
         float total = (float) items.stream()
                 .mapToDouble(CartItemResponse::getSubtotal)
                 .sum();
         response.setTotal(new java.math.BigDecimal(total));
-
         return response;
     }
 }
