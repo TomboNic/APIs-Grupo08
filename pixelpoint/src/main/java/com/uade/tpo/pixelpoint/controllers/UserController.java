@@ -1,31 +1,27 @@
 package com.uade.tpo.pixelpoint.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.uade.tpo.pixelpoint.entity.dto.UserResponse;
+import com.uade.tpo.pixelpoint.services.UserServiceImpl;
+
+import lombok.RequiredArgsConstructor;
+
 
 @RestController
-@RequestMapping("user")
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    // @GetMapping()
-    // public ArrayList<User> getUser() {
-	// 	UserService userService = new UserService();
-    //     return userService.getDevice();
-    // }
-    
-    // // Obtener por id
-	// @GetMapping("{userId}") // GET - localhost:****/brand/3
-	// public User getDeviceMoedlById(@PathVariable Long userId) {
-	// 	UserService userService = new UserService();
-    //     return userService.getUserById(userId);
-	// }
+  @Autowired UserServiceImpl userService;
 
-    // // Crear nueva Usering
-	// @PostMapping
-	// public User postUser(@RequestBody String userId) {
-	// 	UserService userService = new UserService();
-    //     return userService.createUser(userId);
-	// }
-
+  @GetMapping("/me")
+  public ResponseEntity<UserResponse> me(Authentication auth) {
+    return ResponseEntity.ok(userService.findByEmail(auth.getName()));
+  }
 }
