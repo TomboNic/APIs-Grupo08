@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserServiceImpl {
 
-  @Autowired  
+  @Autowired
   UserRepository userRepository;
 
   public UserResponse findByEmail(String email) {
@@ -28,9 +28,8 @@ public class UserServiceImpl {
         .email(user.getEmail())
         .roles(
             user.getAuthorities().stream()
-                .map(a -> a.getAuthority())
-                .collect(Collectors.toSet())
-        )
+                .map(a -> a.getAuthority().replaceFirst("^ROLE_", "")) // → BUYER, SELLER, ADMIN
+                .collect(Collectors.toSet()))
         .build();
   }
 }

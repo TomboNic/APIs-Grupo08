@@ -160,15 +160,56 @@ public class OrderServiceImpl implements OrderService {
     private String buildItemTitle(Listing listing) {
         if (listing == null)
             return "Item";
-        try {
-            var v = listing.getVariant();
-            if (v != null) {
-                String s = v.toString();
-                if (s != null && !s.isBlank())
-                    return s;
+
+        var v = listing.getVariant();
+        if (v == null)
+            return "Listing #" + listing.getId();
+
+        // Brand y modelo (con defensivos por si alguna relación viene null)
+        String brand = (v.getDeviceModel() != null && v.getDeviceModel().getBrand() != null)
+                ? v.getDeviceModel().getBrand().getName()
+                : null;
+
+        String model = (v.getDeviceModel() != null)
+                ? v.getDeviceModel().getModelName()
+                : null;
+
+        // Primitivos: usar > 0 si querés evitar mostrar "0GB"
+        String ram = (v.getRam() > 0) ? (v.getRam() + "GB RAM") : null;
+        String storage = (v.getStorage() > 0) ? (v.getStorage() + "GB") : null;
+
+        // Strings: evitar vacíos
+        String color = (v.getColor() != null && !v.getColor().isBlank()) ? v.getColor() : null;
+
+        // Enum: mapear a etiqueta legible
+        String conditionLabel = null;
+        if (v.getCondition() != null) {
+            switch (v.getCondition()) { // si es enum, podés switchar directo
+                case NEW -> conditionLabel = "Nuevo";
+                case REFURB -> conditionLabel = "Reacondicionado";
+                case USED -> conditionLabel = "Usado";
+                default -> conditionLabel = v.getCondition().name(); // fallback
             }
-        } catch (Exception ignored) {
         }
-        return "Listing #" + listing.getId();
+
+        // Construir solo con partes no nulas/ vacías
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (brand != null && !brand.isBlank())
+            parts.add(brand);
+        if (model != null && !model.isBlank())
+            parts.add(model);
+        if (ram != null)
+            parts.add(ram);
+        if (storage != null)
+            parts.add(storage);
+        if (color != null)
+            parts.add(color);
+        if (conditionLabel != null)
+            parts.add(conditionLabel);
+
+        if (parts.isEmpty())
+            return "Listing #" + listing.getId();
+        return String.join(" - ", parts);
     }
+
 }
