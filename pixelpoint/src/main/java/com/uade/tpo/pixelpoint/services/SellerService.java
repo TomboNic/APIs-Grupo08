@@ -13,4 +13,5 @@ public interface SellerService {
     Seller updateSeller(Seller seller);
     void deleteSeller(Long sellerId);
     Seller createSeller(String email, String shopName, String description);
+    Optional<Seller> getSellerByUserEmail(String email);
 }

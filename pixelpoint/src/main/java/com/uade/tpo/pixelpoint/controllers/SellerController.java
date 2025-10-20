@@ -74,6 +74,15 @@ public class SellerController {
         return ResponseEntity.created(location).body(created);
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Seller> getMySeller(Authentication auth) {
+        String email = auth.getName(); // email del usuario logueado
+        Optional<Seller> sellerOpt = sellerService.getSellerByUserEmail(email);
+        return sellerOpt.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+    
     // PUT /seller/{id} - Actualizar seller existente
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','SELLER')")

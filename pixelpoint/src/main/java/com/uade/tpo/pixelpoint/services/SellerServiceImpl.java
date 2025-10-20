@@ -40,7 +40,7 @@ public class SellerServiceImpl implements SellerService {
         }
 
         Seller seller = new Seller();
-        seller.setUser(user);  // <- CLAVE
+        seller.setUser(user); 
         seller.setShopName(shopName);
         seller.setDescription(description);
 
@@ -55,6 +55,11 @@ public class SellerServiceImpl implements SellerService {
     @Override
     public void deleteSeller(Long sellerId) {
         sellerRepository.deleteById(sellerId);
+    }
+
+    public Optional<Seller> getSellerByUserEmail(String email) {
+        return userRepository.findByEmail(email)
+                .flatMap(user -> sellerRepository.findByUserId(user.getId()));
     }
 
 }
