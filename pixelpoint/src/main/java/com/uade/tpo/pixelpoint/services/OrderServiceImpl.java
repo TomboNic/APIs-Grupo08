@@ -35,86 +35,83 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
 
+    @Override
+    @Transactional
     public Order createFromCart(Long userId) {
-    // 1) Obtener carrito del usuario
-    Cart cart = cartRepository.findByUserId(userId)
-        .orElseThrow(() -> new IllegalStateException("No se encontró el carrito del usuario " + userId));
+        // 1) Obtener carrito del usuario
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("No se encontró el carrito del usuario " + userId));
 
-    if (cart.getItems() == null || cart.getItems().isEmpty()) {
-        throw new IllegalStateException("El carrito está vacío");
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new IllegalStateException("El carrito está vacío");
+        }
+
+        // 2) Crear orden base
+        Order order = new Order();
+        order.setBuyer(cart.getUser());
+        order.setOrderNumber(generateOrderNumber());
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        if (order.getItems() == null) {
+            order.setItems(new java.util.ArrayList<>());
+        }
+
+        double subtotal = 0.0;
+
+        for (CartItem ci : cart.getItems()) {
+            Listing listing = ci.getListing();
+            if (listing == null) {
+                throw new IllegalStateException("Item de carrito sin listing asociado");
+            }
+
+            int qty = ci.getQuantity();
+            if (qty <= 0) {
+                throw new IllegalArgumentException("Cantidad inválida para el listing " + listing.getId());
+            }
+
+            int affected = listingRepository.decrementStock(listing.getId(), qty);
+            if (affected == 0) {
+                throw new IllegalStateException("Stock insuficiente para listing " + listing.getId());
+            }
+
+            double unit = 0.0;
+            if (listing.getEffectivePrice() != null) {
+                unit = listing.getEffectivePrice().doubleValue();
+            } else if (listing.getPrice() != null) {
+                unit = listing.getPrice().doubleValue();
+            }
+
+            OrderItem oi = new OrderItem();
+            oi.setOrder(order);
+            oi.setListingId(listing.getId());
+            oi.setSellerId(listing.getSeller().getId());
+            oi.setTitle(buildItemTitle(listing));
+            oi.setUnitPrice(unit);
+            oi.setQuantity(qty);
+            oi.setLineTotal(unit * qty);
+
+            order.getItems().add(oi);
+            subtotal += oi.getLineTotal();
+        }
+
+        // 4) Totales
+        order.setSubtotal(subtotal);
+        order.setDiscountTotal(0.0);
+        order.setTaxTotal(0.0);
+        order.setGrandTotal(subtotal);
+
+        // 5) Guardar orden
+        Order saved = orderRepository.save(order);
+
+        // 6) Vaciar carrito (conservar el carrito)
+        cartItemsRepository.deleteByCartId(cart.getId());
+        if (cart.getItems() != null) {
+            cart.getItems().clear();
+        }
+        cartRepository.save(cart);
+
+        // ✅ Asegurarse de retornar siempre un Order
+        return saved;
     }
-
-    // 2) Crear orden base
-    Order order = new Order();
-    order.setBuyer(cart.getUser());
-    order.setOrderNumber(generateOrderNumber());
-    order.setStatus(OrderStatus.PENDING_PAYMENT);
-
-    if (order.getItems() == null) {
-        order.setItems(new ArrayList<>());
-    }
-
-    double subtotal = 0.0;
-
-    // 3) Recorrer ítems y descontar stock de forma atómica
-    for (CartItem ci : cart.getItems()) {
-        Listing listing = ci.getListing();
-        if (listing == null) {
-            throw new IllegalStateException("Item de carrito sin listing asociado");
-        }
-
-        int qty = ci.getQuantity();
-        if (qty <= 0) {
-            throw new IllegalArgumentException("Cantidad inválida para el listing " + listing.getId());
-        }
-
-        // Descuento atómico de stock (asegúrate de tener ListingRepository.decrementStock(listingId, qty))
-        int affected = listingRepository.decrementStock(listing.getId(), qty);
-        if (affected == 0) {
-            throw new IllegalStateException("Stock insuficiente para listing " + listing.getId());
-        }
-
-        // Precio efectivo (si no hay descuento, usar price)
-        double unit = 0.0;
-        if (listing.getEffectivePrice() != null) {
-            unit = listing.getEffectivePrice().doubleValue();
-        } else if (listing.getPrice() != null) {
-            unit = listing.getPrice().doubleValue();
-        }
-
-        // Crear OrderItem
-        if (listing.getSeller() == null || listing.getSeller().getId() == null) {
-            throw new IllegalStateException("El listing " + listing.getId() + " no tiene seller asociado");
-        }
-
-        OrderItem oi = new OrderItem();
-        oi.setOrder(order);
-        oi.setListingId(listing.getId());
-        oi.setSellerId(listing.getSeller().getId());
-        oi.setTitle(buildItemTitle(listing));
-        oi.setUnitPrice(unit);
-        oi.setQuantity(qty);
-        oi.setLineTotal(unit * qty);
-
-        order.getItems().add(oi);
-        subtotal += oi.getLineTotal();
-    }
-
-    // 4) Totales
-    order.setSubtotal(subtotal);
-    order.setDiscountTotal(0.0);
-    order.setTaxTotal(0.0);
-    order.setGrandTotal(subtotal);
-
-    // 5) Guardar orden
-    Order saved = orderRepository.save(order);
-
-    // 6) Vaciar y borrar carrito
-    cartItemsRepository.deleteByCartId(cart.getId());
-    cartRepository.delete(cart);
-
-    return saved;
-}
 
     @Override
     @Transactional(readOnly = true)
