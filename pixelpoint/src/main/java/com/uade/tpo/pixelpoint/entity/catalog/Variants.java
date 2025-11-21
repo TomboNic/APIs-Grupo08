@@ -1,5 +1,7 @@
 package com.uade.tpo.pixelpoint.entity.catalog;
 
+import com.uade.tpo.pixelpoint.images.VariantImage;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,6 +11,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -33,6 +38,10 @@ public class Variants {
     private String color;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "item_condition") 
+    @Column(name = "item_condition")
     private Condition condition;
+
+    // Eliminar la variante tambien elimina sus imagenes asociadas
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VariantImage> images = new ArrayList<>();
 }
