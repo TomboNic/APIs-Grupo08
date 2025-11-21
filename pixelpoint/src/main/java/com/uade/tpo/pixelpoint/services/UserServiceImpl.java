@@ -7,11 +7,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.uade.tpo.pixelpoint.entity.dto.UpdateUserRequest;
 import com.uade.tpo.pixelpoint.entity.dto.UserResponse;
 import com.uade.tpo.pixelpoint.entity.marketplace.Role;
 import com.uade.tpo.pixelpoint.entity.marketplace.User;
+import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
+import com.uade.tpo.pixelpoint.entity.marketplace.Seller;
+import com.uade.tpo.pixelpoint.repository.cart.CartItemsRepository;
+import com.uade.tpo.pixelpoint.repository.cart.CartRepository;
+import com.uade.tpo.pixelpoint.repository.cart.OrderRepository;
+import com.uade.tpo.pixelpoint.repository.marketplace.ListingRepository;
+import com.uade.tpo.pixelpoint.repository.marketplace.SellerRepository;
 import com.uade.tpo.pixelpoint.repository.marketplace.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +30,21 @@ public class UserServiceImpl {
 
   @Autowired
   UserRepository userRepository;
+
+  @Autowired
+  SellerRepository sellerRepository;
+
+  @Autowired
+  ListingRepository listingRepository;
+
+  @Autowired
+  CartRepository cartRepository;
+
+  @Autowired
+  CartItemsRepository cartItemsRepository;
+
+  @Autowired
+  OrderRepository orderRepository;
 
   public UserResponse findByEmail(String email) {
     var user = userRepository.findByEmail(email)
@@ -130,10 +153,29 @@ public class UserServiceImpl {
         .build();
   }
 
+  @Transactional
   public void deleteUser(Long id) {
-    if (!userRepository.existsById(id)) {
-      throw new RuntimeException("Usuario no encontrado");
-    }
-    userRepository.deleteById(id);
+    User user = userRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+    sellerRepository.findByUserId(id).ifPresent(seller -> removeSellerData(seller));
+
+    cartRepository.findByUserId(id).ifPresent(cart -> {
+      cartItemsRepository.deleteByCartId(cart.getId());
+      cartRepository.delete(cart);
+    });
+
+    orderRepository.findByBuyerId(id).forEach(orderRepository::delete);
+
+    userRepository.delete(user);
+  }
+
+  private void removeSellerData(Seller seller) {
+    List<Listing> listings = listingRepository.findBySellerId(seller.getId());
+    listings.forEach(listing -> {
+      cartItemsRepository.deleteByListingId(listing.getId());
+      listingRepository.delete(listing);
+    });
+    sellerRepository.delete(seller);
   }
 }
