@@ -1,5 +1,6 @@
 package com.uade.tpo.pixelpoint.entity.catalog;
 
+import com.uade.tpo.pixelpoint.entity.marketplace.Listing;
 import com.uade.tpo.pixelpoint.images.VariantImage;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -15,6 +16,8 @@ import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -26,6 +29,8 @@ public class Variants {
 
     @ManyToOne
     @JoinColumn(name = "device_model_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private DeviceModel deviceModel;
 
     @Column
@@ -43,5 +48,13 @@ public class Variants {
 
     // Eliminar la variante tambien elimina sus imagenes asociadas
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<VariantImage> images = new ArrayList<>();
+
+    // Eliminar la variante tambien elimina sus publicaciones asociadas
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Listing> listings = new ArrayList<>();
 }
