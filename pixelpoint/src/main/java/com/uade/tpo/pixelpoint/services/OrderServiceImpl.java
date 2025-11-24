@@ -50,7 +50,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setBuyer(cart.getUser());
         order.setOrderNumber(generateOrderNumber());
-        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        // Por ahora las ordenes quedan pagadas por defecto
+        order.setStatus(OrderStatus.PAID);
         if (order.getItems() == null) {
             order.setItems(new java.util.ArrayList<>());
         }
